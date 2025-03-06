@@ -1,5 +1,6 @@
 use crate::dependencies::{Dependency, Patch, RegistryPatch};
-use serde::{Deserialize, Serialize};
+use cargo_metadata::{CrateType, Edition};
+use serde::Serialize;
 use std::collections::BTreeMap as Map;
 use std::ffi::OsStr;
 use std::path::PathBuf;
@@ -25,20 +26,6 @@ pub struct Package {
     pub version: String,
     pub edition: Edition,
     pub publish: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum Edition {
-    #[serde(rename = "2015")]
-    E2015,
-    #[serde(rename = "2018")]
-    E2018,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-enum CrateType {
-    #[serde(rename = "cdylib")]
-    CDyLib,
 }
 
 #[derive(Serialize, Debug)]
@@ -70,12 +57,6 @@ pub struct Build {
 
 #[derive(Serialize, Debug)]
 pub struct Workspace {}
-
-impl Default for Edition {
-    fn default() -> Self {
-        Edition::E2018
-    }
-}
 
 impl AsRef<OsStr> for Name {
     fn as_ref(&self) -> &OsStr {

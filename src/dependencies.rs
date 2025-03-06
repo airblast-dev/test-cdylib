@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::manifest::Edition;
+use cargo_metadata::Edition;
 use serde::de::value::MapAccessDeserializer;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
