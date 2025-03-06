@@ -1,7 +1,8 @@
 use cargo_metadata::Message;
 use serde::Deserialize;
+use std::io::BufReader;
 use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
+use std::process::{Child, Command, Stdio};
 
 use crate::error::{Error, Result};
 use crate::features;
@@ -44,9 +45,9 @@ pub fn build_cdylib(project: &Project) -> Result<PathBuf> {
         cargo_build(&project.features)
             .current_dir(&project.dir)
             .env("CARGO_TARGET_DIR", path!(&project.dir / "target"))
+            .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
-            .output()
-            .map_err(Error::Cargo)?,
+            .spawn()?,
     )
 }
 
@@ -54,9 +55,9 @@ pub fn build_self_cdylib() -> Result<PathBuf> {
     parse_output(
         cargo_build(&features::find())
             .arg("--lib")
+            .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
-            .output()
-            .map_err(Error::Cargo)?,
+            .spawn()?,
     )
 }
 
@@ -65,15 +66,16 @@ pub fn build_example(name: &str) -> Result<PathBuf> {
         cargo_build(&features::find())
             .arg("--example")
             .arg(name)
+            .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
-            .output()
-            .map_err(Error::Cargo)?,
+            .spawn()?,
     )
 }
 
-pub fn parse_output(result: Output) -> Result<PathBuf> {
+pub fn parse_output(mut result: Child) -> Result<PathBuf> {
     let mut artifact = None;
-    for message in cargo_metadata::parse_messages(result.stdout.as_slice()) {
+
+    for message in Message::parse_stream(BufReader::new(result.stdout.as_mut().unwrap())) {
         match message? {
             Message::CompilerMessage(m) => eprintln!("{}", m),
             Message::CompilerArtifact(a) => artifact = Some(a),
@@ -81,12 +83,13 @@ pub fn parse_output(result: Output) -> Result<PathBuf> {
         }
     }
 
-    if !result.status.success() {
+    let status = result.wait()?;
+    if !status.success() {
         return Err(Error::CargoFail);
     }
     artifact
         .ok_or(Error::CargoFail)
-        .map(|a| a.filenames[0].clone())
+        .map(|a| a.filenames[0].clone().into_std_path_buf())
 }
 
 pub fn metadata() -> Result<Metadata> {
