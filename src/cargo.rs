@@ -24,8 +24,7 @@ fn cargo_supports_offline() -> bool {
         .arg("--version")
         .arg("--offline")
         .output()
-        .ok()
-        .map_or(false, |res| res.status.success())
+        .is_ok_and(|res| res.status.success())
 }
 
 fn cargo_build(features: &Option<Vec<String>>) -> Command {
